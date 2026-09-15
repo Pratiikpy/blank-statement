@@ -1,0 +1,210 @@
+// SPDX-License-Identifier: Apache-2.0
+// Copyright 2026 Prateek
+pragma language_version >= 0.23;
+import CompactStandardLibrary;
+
+// A batch of receipts, reduced to what a statement needs to know about it.
+// Anchoring one of these is a single transaction no matter how many receipts
+// went into it, so a long history costs the same as a short one.
+export struct Checkpoint {
+  prev: Bytes<32>;     // the checkpoint before this one, chaining the history
+  total: Uint<64>;     // sum of the batch
+  count: Uint<16>;     // real receipts in the batch, padding excluded
+  largest: Uint<64>;   // biggest single receipt in the batch
+}
+
+export struct Request {
+  verifierPk: Bytes<32>;
+  holderId: Bytes<32>;
+  threshold: Uint<64>;
+  expiry: Uint<64>;
+  open: Boolean;
+}
+
+// The threshold is carried here as well as on the Request, and that is the
+// point rather than duplication. Without it a statement reads "met the amount
+// asked for" and never says which amount, so an answer to a penny is
+// indistinguishable from an answer to a thousand pounds: a holder could post
+// themselves a trivial ask under the verifier's name and hand over that link
+// instead. It costs no privacy, because the threshold is the verifier's own
+// number and is already public on the Request.
+export struct Verdict {
+  met: Boolean;
+  threshold: Uint<64>;
+  concentrationOk: Boolean;
+  batches: Uint<16>;
+  receiptCount: Uint<16>;
+  verifierPk: Bytes<32>;
+}
+
+export ledger receipts: MerkleTree<32, Bytes<32>>;
+export ledger requests: Map<Bytes<32>, Request>;
+export ledger verdicts: Map<Bytes<32>, Verdict>;
+export ledger spent: Set<Bytes<32>>;
+export ledger issued: Counter;
+
+witness holderSk(): Bytes<32>;
+// One batch, for anchoring.
+witness batchAmounts(): Vector<8, Uint<64>>;
+witness batchCounterparties(): Vector<8, Bytes<32>>;
+// How many of the eight slots hold a real receipt. The rest are padding.
+witness batchCount(): Uint<16>;
+// A run of checkpoints, newest first, for answering.
+witness chain(): Vector<8, Checkpoint>;
+witness chainRands(): Vector<8, Bytes<32>>;
+witness membership(): MerkleTreePath<32, Bytes<32>>;
+
+pure circuit addUp(acc: Uint<64>, x: Uint<64>): Uint<64> {
+  return (acc + x) as Uint<64>;
+}
+pure circuit maxOf(acc: Uint<64>, x: Uint<64>): Uint<64> {
+  return x > acc ? x : acc;
+}
+pure circuit addCounts(acc: Uint<16>, x: Uint<16>): Uint<16> {
+  return (acc + x) as Uint<16>;
+}
+// One per checkpoint that carries at least one real receipt, so a run padded
+// out to eight does not claim eight batches of history.
+pure circuit usedSlot(c: Checkpoint): Uint<16> {
+  return c.count > 0 ? 1 as Uint<16> : 0 as Uint<16>;
+}
+
+export circuit holderIdOf(sk: Bytes<32>): Bytes<32> {
+  return persistentHash<Vector<2, Bytes<32>>>([pad(32, "blank:holder:v1"), sk]);
+}
+
+export circuit checkpointIdOf(c: Checkpoint, rand: Bytes<32>): Bytes<32> {
+  return persistentCommit<Checkpoint>(c, rand);
+}
+
+// Anchor a batch. Counterparty distinctness is proven HERE, once per batch,
+// rather than again on every statement that folds the batch.
+export circuit anchorCheckpoint(prev: Bytes<32>, rand: Bytes<32>): Bytes<32> {
+  const amts = batchAmounts();
+  const cps = batchCounterparties();
+
+  for (const i of 0..8) {
+    for (const j of 0..8) {
+      assert(i == j || cps[i] != cps[j], "duplicate counterparty");
+    }
+  }
+
+  // Tie the declared count to the batch itself: the first n slots must each
+  // carry money and the rest must be empty. Without this the holder could
+  // publish any receipt count they liked.
+  const n = batchCount();
+  assert(n <= 8, "batch count out of range");
+  for (const i of 0..8) {
+    const real = (i as Uint<16>) < n;
+    assert(!real || amts[i] != 0, "a counted slot holds no receipt");
+    assert(real || amts[i] == 0, "an uncounted slot holds a receipt");
+  }
+
+  const c = Checkpoint {
+    prev: disclose(prev),
+    total: fold(addUp, 0 as Uint<64>, amts),
+    count: n,
+    largest: fold(maxOf, 0 as Uint<64>, amts)
+  };
+
+  const id = disclose(checkpointIdOf(c, rand));
+  receipts.insert(id);
+  issued.increment(1);
+  return id;
+}
+
+export circuit createRequest(
+  reqId: Bytes<32>,
+  verifierPk: Bytes<32>,
+  holderId: Bytes<32>,
+  threshold: Uint<64>,
+  expiry: Uint<64>
+): [] {
+  assert(!requests.member(disclose(reqId)), "request id already used");
+  requests.insert(disclose(reqId), Request {
+    verifierPk: disclose(verifierPk),
+    holderId: disclose(holderId),
+    threshold: disclose(threshold),
+    expiry: disclose(expiry),
+    open: true
+  });
+}
+
+// Fold a run of checkpoints. One Merkle proof covers the whole run, because the
+// checkpoints chain: proving the newest is anchored and that each one names its
+// predecessor proves the lot.
+export circuit answerRequest(reqId: Bytes<32>, nonce: Bytes<32>): Verdict {
+  assert(requests.member(disclose(reqId)), "no such request");
+  const req = requests.lookup(disclose(reqId));
+  assert(req.open, "request already answered");
+  assert(blockTimeLt(req.expiry), "request expired");
+
+  const sk = holderSk();
+  const zero = pad(32, "");
+  assert(
+    req.holderId == zero || req.holderId == holderIdOf(sk),
+    "not the holder this was asked of"
+  );
+
+  const run = chain();
+  const rands = chainRands();
+
+  // The newest checkpoint must be the leaf that is actually anchored.
+  const path = membership();
+  assert(path.leaf == checkpointIdOf(run[0], rands[0]), "newest checkpoint is not the anchored one");
+  assert(receipts.checkRoot(disclose(merkleTreePathRoot<32, Bytes<32>>(path))), "checkpoint not in tree");
+
+  // Each checkpoint must name its predecessor, which chains the whole run.
+  for (const i of 0..7) {
+    assert(run[i].prev == checkpointIdOf(run[i + 1], rands[i + 1]), "broken checkpoint chain");
+  }
+
+  const totals = map((c) => c.total, run);
+  const counts = map((c) => c.count, run);
+  const largests = map((c) => c.largest, run);
+
+  const total = fold(addUp, 0 as Uint<64>, totals);
+  const receiptCount = fold(addCounts, 0 as Uint<16>, counts);
+  const largest = fold(maxOf, 0 as Uint<64>, largests);
+  const batchCountUsed = fold(addCounts, 0 as Uint<16>, map(usedSlot, run));
+
+  const nul = persistentHash<Vector<3, Bytes<32>>>(
+    [pad(32, "blank:nul:v1"), sk, nonce]
+  );
+  assert(!spent.member(disclose(nul)), "statement already used");
+  spent.insert(disclose(nul));
+
+  const met = disclose(total >= req.threshold);
+  // No single receipt is worth more than half the run. Stated as an addition
+  // because multiplication widens and the widened product is rejected.
+  const concentrationOk = disclose(
+    (largest as Uint<72>) + (largest as Uint<72>) <= (total as Uint<72>)
+  );
+
+  const v = Verdict {
+    met: met,
+    // Taken from the ask, never from the holder, so the bar a statement claims
+    // to clear is the bar that was actually set.
+    threshold: req.threshold,
+    concentrationOk: concentrationOk,
+    batches: disclose(batchCountUsed),
+    receiptCount: disclose(receiptCount),
+    verifierPk: req.verifierPk
+  };
+
+  const stmt = persistentCommit<Vector<3, Bytes<32>>>(
+    [pad(32, "blank:stmt:v1"), reqId, nonce], nonce
+  );
+  verdicts.insert(disclose(stmt), v);
+
+  // An ask answers once. Closing it here is what makes that true on the
+  // ledger rather than only in the interface.
+  requests.insert(disclose(reqId), Request {
+    verifierPk: req.verifierPk,
+    holderId: req.holderId,
+    threshold: req.threshold,
+    expiry: req.expiry,
+    open: false
+  });
+  return v;
+}

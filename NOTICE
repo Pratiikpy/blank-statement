@@ -1,0 +1,21 @@
+blank. statement
+Copyright 2026 Prateek
+
+This product includes software developed for the Midnight Buildathon.
+
+The Midnight-related code in this repository, including the Compact contract in
+contracts/src and the application and bridge code that exercises it, is licensed
+under the Apache License, Version 2.0. See LICENSE.
+
+Third-party components used at runtime and retained under their own licences:
+
+  @midnight-ntwrk/*            Midnight Foundation
+  @no-witness-labs/midday-sdk  No Witness Labs
+  react, react-dom             Meta Platforms, Inc. and affiliates
+  vite, @vitejs/plugin-react   Vite contributors
+
+Container images used for local development:
+
+  midnightntwrk/midnight-node:1.0.0
+  midnightntwrk/indexer-standalone:4.3.3
+  midnightntwrk/proof-server:8.1.0

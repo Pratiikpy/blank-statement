@@ -1,0 +1,11 @@
+# Shell scripts and sources must stay LF. A CRLF here turns `set -euo pipefail`
+# into `pipefail\r` and WSL bash rejects it with "invalid option name".
+* text=auto eol=lf
+*.sh text eol=lf
+*.mjs text eol=lf
+*.js text eol=lf
+*.jsx text eol=lf
+*.css text eol=lf
+*.compact text eol=lf
+*.yml text eol=lf
+*.png binary

@@ -1,0 +1,204 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>wallet path harness</title>
+  </head>
+  <body>
+    <pre id="out">idle</pre>
+    <script type="module">
+      // A bench for the browser-side wallet path, kept out of the app so a
+      // failure here is unambiguous about where it came from.
+      import './src/polyfills.js';
+      import { connectWalletProviders, walletFunds, injectedConnectors } from './src/chain.js';
+      // Imported up here rather than inside the write, because a first-time
+      // dynamic import makes vite re-optimize its dependencies and reload the
+      // page, which silently discards a call already in flight.
+      import { setNetworkId } from '@midnight-ntwrk/midnight-js-network-id';
+
+      const out = document.getElementById('out');
+      const log = (m) => { out.textContent += '\n' + m; window.__log = out.textContent; };
+      window.__log = '';
+
+      window.checkWallet = async ({ networkId = 'undeployed', feeRelay = null } = {}) => {
+        try {
+          log('connectors: ' + JSON.stringify(injectedConnectors().map((c) => ({ n: c.name, v: c.apiVersion }))));
+          log('connecting on ' + networkId + (feeRelay ? ' with the fee relay' : '') + '…');
+
+          const c = await connectWalletProviders({ networkId, feeRelay });
+          if (!c.ok) {
+            log('FAILED: ' + c.state + ' — ' + c.message);
+            window.__result = { ok: false, state: c.state, message: c.message };
+            return;
+          }
+
+          log('connected: ' + String(c.address).slice(0, 30) + '… on ' + c.networkId);
+          log('providers: ' + Object.keys(c.providers).join(', '));
+          log('prover   : ' + c.config.proverServerUri);
+          log('indexer  : ' + c.config.indexerUri);
+          log('fees     : ' + (c.feeRelay ? 'the relay at ' + c.feeRelay : 'the wallet itself'));
+
+          // A wallet with no DUST cannot pay a fee, so it cannot sign. Saying so
+          // plainly beats a write that hangs with no explanation.
+          const funds = await walletFunds(c.session);
+          log('tNIGHT   : ' + funds.night.toString());
+          log('DUST     : ' + funds.dust.toString() + ' (cap ' + funds.dustCap.toString() + ')');
+          log(funds.canPayFees
+            ? 'this wallet can pay fees'
+            : (c.feeRelay
+              ? 'no DUST, but the relay pays the fee, so this wallet can still write'
+              : 'NO DUST — this wallet cannot pay a fee, so it cannot sign anything'));
+
+          window.__result = {
+            ok: true,
+            address: c.address,
+            networkId: c.networkId,
+            providers: Object.keys(c.providers),
+            night: funds.night.toString(),
+            dust: funds.dust.toString(),
+            dustCap: funds.dustCap.toString(),
+            canPayFees: funds.canPayFees,
+            feeRelay: c.feeRelay ?? null,
+          };
+        } catch (e) {
+          log('THREW: ' + String(e?.message ?? e).slice(0, 300));
+          window.__result = { ok: false, message: String(e?.message ?? e).slice(0, 300) };
+        }
+      };
+
+      // The write, through the path the README's claim depends on: the
+      // holder's own wallet, in the holder's own browser, producing the proof
+      // and authorising the transaction, with no seed-holding process acting
+      // on their behalf.
+      //
+      // This uses midday's own browser entry points rather than the providers
+      // built in chain.js, because the SDK wires the fee relay itself when
+      // asked (Client.create with feeRelay), and using the supported path is
+      // worth more than proving our own wiring twice.
+      window.writeWithWallet = async ({ networkId = 'undeployed', feeRelay = null, address = null } = {}) => {
+        try {
+          const M = await import('@no-witness-labs/midday-sdk');
+
+          // The SDK keeps the network id in a global, and Client.create is
+          // what normally sets it. Building the providers directly skips that,
+          // and the omission only surfaces later, inside the circuit call, as
+          // "Network ID has not been configured".
+          setNetworkId(networkId);
+
+          log('connecting the wallet' + (feeRelay ? ', fees to the relay' : '') + '…');
+
+          // Build the providers here rather than asking Client.create to do
+          // it, because the fee relay has to reach the balancing step and
+          // Client.create does not take it there: with feeRelay set it still
+          // calls Lace's balanceUnsealedTransaction with fees on, and a wallet
+          // without DUST fails as "Insufficient Funds: could not balance
+          // dust". chain.js passes `{ payFees: false }` and routes submission
+          // through the relay, which is what makes a DUST-less wallet work.
+          const wc = await connectWalletProviders({ networkId, feeRelay });
+          if (!wc.ok) throw new Error('the wallet did not connect: ' + wc.message);
+          log('wallet connected: ' + String(wc.address).slice(0, 26) + '…');
+          log('prover   : ' + wc.config.proverServerUri);
+          log('indexer  : ' + wc.config.indexerUri);
+          log('fees     : ' + (feeRelay ? 'the relay at ' + feeRelay : 'the wallet itself'));
+
+          // Import the compiled contract off disk, relative to this file, so
+          // vite resolves and transforms it.
+          //
+          // Loading it from the served /contracts/out/ URL instead looks
+          // equivalent and is not: that path is served raw by middleware, so
+          // the module arrives untransformed and its own bare imports
+          // ("@midnight-ntwrk/compact-runtime") reach the browser, which
+          // cannot resolve them. The served copy is for the prover keys and
+          // zkir, which are fetched rather than imported.
+          const C = await import('../contracts/out/contract/index.js');
+          const BATCH = 8;
+          const zero = new Uint8Array(32);
+          const rand = crypto.getRandomValues(new Uint8Array(32));
+
+          // Three receipts, padded to the batch width the circuit declares.
+          // The vector length is fixed, so a short array is a type error, and
+          // every amount has to be a bigint for the same reason.
+          const amounts = Array.from({ length: BATCH }, (_, i) => [1000n, 2000n, 3000n][i] ?? 0n);
+          const privateState = {
+            sk: crypto.getRandomValues(new Uint8Array(32)),
+            batchAmounts: amounts,
+            // Distinct on purpose: the circuit asserts no counterparty repeats
+            // inside a batch, so a padded run of zeroes is rejected as a
+            // duplicate rather than treated as empty.
+            batchCps: Array.from({ length: BATCH }, () => crypto.getRandomValues(new Uint8Array(32))),
+            batchCount: 3n,
+            chain: undefined,
+            chainRands: undefined,
+            path: undefined,
+          };
+          // A witness is handed the private state and returns [state, value].
+          // Returning the value alone is what produced "expected Vector<8, …>
+          // but received 2000n": the runtime read the array's second slot as
+          // the whole return.
+          const witnesses = {
+            holderSk: ({ privateState: s }) => [s, s.sk],
+            batchAmounts: ({ privateState: s }) => [s, s.batchAmounts],
+            batchCounterparties: ({ privateState: s }) => [s, s.batchCps],
+            batchCount: ({ privateState: s }) => [s, s.batchCount],
+            chain: ({ privateState: s }) => [s, s.chain],
+            chainRands: ({ privateState: s }) => [s, s.chainRands],
+            membership: ({ privateState: s }) => [s, s.path],
+          };
+
+          // Contract.create takes the providers directly, with no Client to
+          // assemble (and override) them.
+          const loaded = await M.Contract.create({
+            module: C,
+            // fromUrl, not fromPath: fromPath reads a filesystem, which a
+            // browser does not have. It fails as "Failed to read verifier key",
+            // which reads like a missing artifact rather than the wrong reader.
+            zkConfig: M.ZkConfig.fromUrl(new URL('/contracts/out', window.location.origin).href),
+            privateStateId: 'blank-statement-browser',
+            witnesses,
+            initialPrivateState: privateState,
+            walletProvider: wc.providers.walletProvider,
+            midnightProvider: wc.providers.midnightProvider,
+            publicDataProvider: wc.providers.publicDataProvider,
+            privateStateProvider: M.PrivateState.inMemoryPrivateStateProvider(),
+            proofServerUrl: wc.config.proverServerUri,
+          });
+          log('contract module loaded');
+
+          const dep = address
+            ? await loaded.join(address, { initialPrivateState: privateState })
+            : await loaded.deploy({ initialPrivateState: privateState });
+          log('contract at ' + dep.address);
+
+          log('anchoring a checkpoint, proving in this browser…');
+          const r = await dep.actions.anchorCheckpoint(zero, rand);
+          // The result shape varies by SDK version, so pick the first field
+          // that looks like an identifier rather than stringifying the object
+          // and reporting "[object Object]" as evidence.
+          const pick = (o, keys) => {
+            for (const k of keys) {
+              const v = o?.[k] ?? o?.public?.[k] ?? o?.result?.[k];
+              if (typeof v === 'string' && v.length) return v;
+            }
+            return null;
+          };
+          const txId = pick(r, ['txId', 'txHash', 'transactionId', 'transactionHash']);
+          // blockHeight comes back as a number, which the string picker skips.
+          const rawBlock = r?.blockHeight ?? r?.public?.blockHeight ?? r?.blockHash ?? null;
+          const block = rawBlock == null ? null : rawBlock;
+          log('WROTE' + (txId ? ' tx ' + txId : '') + (block ? ' in block ' + block : ''));
+          if (!txId) log('  (no transaction id in the result: ' + Object.keys(r ?? {}).join(', ') + ')');
+          window.__write = {
+            ok: true, address: dep.address, txId,
+            block: block == null ? null : String(block),
+            keys: Object.keys(r ?? {}),
+          };
+        } catch (e) {
+          const msg = String(e?.message ?? e);
+          log('WRITE FAILED: ' + msg.slice(0, 400));
+          window.__write = { ok: false, message: msg.slice(0, 400) };
+        }
+      };
+      log('ready');
+    </script>
+  </body>
+</html>

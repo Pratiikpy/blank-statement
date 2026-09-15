@@ -1,0 +1,558 @@
+/* SPDX-License-Identifier: Apache-2.0 */
+/* Copyright 2026 Prateek */
+/*
+ * Blank's design system, taken from packages/app/src/blank-ui/theme.css and
+ * landing/brand-kit.css rather than reinvented. Token names and values match
+ * the originals so a change there can be carried across by search.
+ *
+ * Fonts are requested once, from index.html. An @import here would chain behind
+ * that request and land after first paint.
+ */
+
+:root{
+  /* The engine paints native controls (select popups, scrollbars, autofill,
+     spinners) from this, not from our `color` and `background`. Leaving it at
+     `normal` made the "who may answer" select render as an empty box in
+     WebKit's dark mode: the CSS said light text, the control drew its own dark
+     text on our dark field. Declared per theme below. */
+  color-scheme:light;
+
+  /* Backgrounds */
+  --bg-primary:#FFFFFF;
+  --bg-secondary:#F5F5F7;
+  --bg-tertiary:#E8E8ED;
+
+  /* Glass */
+  --glass-bg:rgba(255,255,255,.6);
+  --glass-border:rgba(255,255,255,.6);
+  --glass-blur:40px;
+  --glass-hover:rgba(255,255,255,.80);
+  --glass-shadow:0 8px 32px rgba(0,0,0,.04);
+
+  /* Text */
+  --text-primary:#1D1D1F;
+  --text-secondary:#6B7280;
+  --text-tertiary:#9CA3AF;
+
+  /* Brand kit, section 02. Cipher is the accent and it means
+     "proof, live, verified", which is exactly what this product publishes. */
+  --ink:#0A0A0A;
+  --stone:#1D1D1F;
+  --graphite:#6B7280;
+  --fog:#9CA3AF;
+  --veil:#F8FAFC;
+  --halo:#FAFAF7;
+  --paper:#FFFFFF;
+  --cipher:#059669;
+  --cipher-soft:#E7F6EF;
+
+  --accent:#059669;
+  --accent-dark:#047857;
+  --accent-bg:var(--cipher-soft);
+  --accent-line:rgba(5,150,105,.24);
+
+  /* Encrypted / money read as the accent, per the original */
+  --encrypted:#10B981;
+  --encrypted-bg:rgba(16,185,129,.10);
+
+  /* Status. Each colour carries a -dark variant for text on its own tint,
+     because the mid tone is a fill colour and fails contrast as type.
+     The tints are solid rather than alpha so the ratio does not change with
+     whatever sits behind them. */
+  --error:#EF4444;
+  --error-dark:#B91C1C;
+  --error-bg:#FEE2E2;
+  --error-line:rgba(239,68,68,.28);
+  --warning:#F59E0B;
+  --warning-dark:#92400E;
+  --warning-bg:#FEF3C7;
+  --warning-line:rgba(180,83,9,.32);
+  --info:#3B82F6;
+  --info-dark:#1D4ED8;
+  --info-bg:#DBEAFE;
+  --info-line:rgba(59,130,246,.30);
+
+  --line:#E5E7EB;
+  --redline:#C2410C;
+  --redline-dark:#9A3412;
+  --redline-bg:#FFEDD5;
+  --redline-line:rgba(194,65,12,.28);
+
+  /* Nav */
+  --nav-active-bg:#1D1D1F;
+  --nav-active-text:#FFFFFF;
+  --nav-inactive-text:rgba(29,29,31,.78);
+
+  --ambient-1:rgba(16,185,129,.04);
+  --ambient-2:rgba(16,185,129,.03);
+  /* The redaction bar is the wordmark's own gesture: a solid block of Ink.
+     The kit has no gradients in it, and a soft grey one read as a loading
+     skeleton rather than as something deliberately withheld. */
+  --redact:var(--ink);
+  --field:var(--veil);
+}
+
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    color-scheme:dark;
+    --bg-primary:#0A0A0A;
+    --bg-secondary:#111113;
+    --bg-tertiary:#1C1C1E;
+    --glass-bg:rgba(30,30,32,.6);
+    --glass-border:rgba(255,255,255,.08);
+    --glass-hover:rgba(40,40,44,.80);
+    --glass-shadow:0 8px 32px rgba(0,0,0,.2);
+    --text-primary:#F5F5F7;
+    --text-secondary:#A1A1AA;
+    --text-tertiary:#A1A1AA;
+    --ink:#0A0A0A; --stone:#1D1D1F; --graphite:#A1A1AA; --fog:#71717A;
+    --veil:#1C1C1E; --halo:#111113; --paper:#0A0A0A; --cipher:#34D399; --cipher-soft:rgba(52,211,153,.12);
+    --accent:#34D399;
+    --accent-dark:#6EE7B7;
+    --accent-bg:rgba(52,211,153,.12);
+    --accent-line:rgba(52,211,153,.26);
+    --encrypted:#34D399;
+    --encrypted-bg:rgba(52,211,153,.12);
+    --error:#F87171;   --error-dark:#FCA5A5;   --error-bg:rgba(248,113,113,.12);  --error-line:rgba(248,113,113,.26);
+    --warning:#FBBF24; --warning-dark:#FBBF24; --warning-bg:rgba(251,191,36,.12); --warning-line:rgba(251,191,36,.26);
+    --info:#60A5FA;    --info-dark:#60A5FA;    --info-bg:rgba(96,165,250,.12);    --info-line:rgba(96,165,250,.26);
+    --line:rgba(255,255,255,.08);
+    --redline:#FB923C;
+    --redline-dark:#FB923C;
+    --redline-bg:rgba(251,146,60,.12);
+    --redline-line:rgba(251,146,60,.26);
+    --nav-active-bg:#FFFFFF;
+    --nav-active-text:#0A0A0A;
+    --nav-inactive-text:rgba(245,245,247,.72);
+    --ambient-1:rgba(52,211,153,.06);
+    --ambient-2:rgba(52,211,153,.04);
+    --redact:#F5F5F7;
+    --field:#1C1C1E;
+  }
+}
+:root[data-theme="dark"]{
+  color-scheme:dark;
+  --bg-primary:#0A0A0A;
+  --bg-secondary:#111113;
+  --bg-tertiary:#1C1C1E;
+  --glass-bg:rgba(30,30,32,.6);
+  --glass-border:rgba(255,255,255,.08);
+  --glass-hover:rgba(40,40,44,.80);
+  --glass-shadow:0 8px 32px rgba(0,0,0,.2);
+  --text-primary:#F5F5F7;
+  --text-secondary:#A1A1AA;
+  --text-tertiary:#A1A1AA;
+  --ink:#0A0A0A; --stone:#1D1D1F; --graphite:#A1A1AA; --fog:#71717A;
+  --veil:#1C1C1E; --halo:#111113; --paper:#0A0A0A; --cipher:#34D399; --cipher-soft:rgba(52,211,153,.12);
+  --accent:#34D399;
+  --accent-dark:#6EE7B7;
+  --accent-bg:rgba(52,211,153,.12);
+  --accent-line:rgba(52,211,153,.26);
+  --encrypted:#34D399;
+  --encrypted-bg:rgba(52,211,153,.12);
+  --error:#F87171;   --error-dark:#FCA5A5;   --error-bg:rgba(248,113,113,.12);  --error-line:rgba(248,113,113,.26);
+  --warning:#FBBF24; --warning-dark:#FBBF24; --warning-bg:rgba(251,191,36,.12); --warning-line:rgba(251,191,36,.26);
+  --info:#60A5FA;    --info-dark:#60A5FA;    --info-bg:rgba(96,165,250,.12);    --info-line:rgba(96,165,250,.26);
+  --line:rgba(255,255,255,.08);
+  --redline:#FB923C;
+  --redline-dark:#FB923C;
+  --redline-bg:rgba(251,146,60,.12);
+  --redline-line:rgba(251,146,60,.26);
+  --nav-active-bg:#FFFFFF;
+  --nav-active-text:#0A0A0A;
+  --nav-inactive-text:rgba(245,245,247,.72);
+  --ambient-1:rgba(52,211,153,.06);
+  --ambient-2:rgba(52,211,153,.04);
+  --redact:#F5F5F7;
+  --field:#1C1C1E;
+}
+
+*{box-sizing:border-box}
+html,body,#root{height:100%}
+body{
+  margin:0;
+  background:var(--bg-secondary);
+  background-image:
+    radial-gradient(ellipse at 20% 0%, var(--ambient-1) 0%, transparent 50%),
+    radial-gradient(ellipse at 80% 100%, var(--ambient-2) 0%, transparent 50%);
+  background-attachment:fixed;
+  color:var(--text-primary);
+  font-family:Outfit,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+  -webkit-font-smoothing:antialiased;
+  -moz-osx-font-smoothing:grayscale;
+}
+
+/* Present to assistive tech, invisible on screen. Never display:none, which
+   removes it from the accessibility tree as well. */
+.sr-only{
+  position:absolute;width:1px;height:1px;padding:0;margin:-1px;
+  overflow:hidden;clip:rect(0 0 0 0);clip-path:inset(50%);white-space:nowrap;border:0;
+}
+
+.wrap{max-width:1120px;margin:0 auto;padding:40px 24px 96px}
+.top{display:flex;align-items:center;justify-content:space-between;margin-bottom:40px;gap:16px;flex-wrap:wrap}
+/* Wordmark: Outfit 800, per brand kit section 01. 24px rather than 22 so the
+   Graphite suffix counts as large text and clears 3:1; at 22px it measured
+   4.44:1 against a 4.5 requirement. */
+.brand{font-size:24px;line-height:1.2;font-weight:800;letter-spacing:-.05em;margin:0}
+.brand span{color:var(--text-secondary);font-weight:400;letter-spacing:-.03em}
+.topright{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+
+.netpill{
+  display:inline-flex;align-items:center;gap:8px;
+  font-family:"JetBrains Mono",ui-monospace,monospace;font-size:12px;line-height:18px;letter-spacing:.08em;
+  color:var(--text-secondary);background:var(--glass-bg);border:1px solid var(--line);
+  padding:9px 14px;border-radius:999px;backdrop-filter:blur(var(--glass-blur));
+  max-width:100%;white-space:nowrap;overflow:hidden;
+}
+.dot{width:6px;height:6px;border-radius:999px;background:var(--accent);flex:none}
+.netpill .addr{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
+.netpill .addr::before{content:none}
+.dot.off{background:var(--redline)}
+.dot.idle{background:var(--fog)}
+.walletpill{
+  display:inline-flex;align-items:center;gap:8px;
+  font-family:"JetBrains Mono",ui-monospace,monospace;font-size:12px;line-height:18px;letter-spacing:.08em;
+  color:var(--text-secondary);background:var(--glass-bg);border:1px solid var(--line);
+  padding:9px 14px;border-radius:999px;backdrop-filter:blur(var(--glass-blur));
+  max-width:100%;white-space:nowrap;
+}
+/* The wallet's own sentence, on the page rather than in a tooltip. It is a
+   child of .top, which is block-level and already full width, so flex-basis
+   100% gives it a line of its own and the wordmark and controls above it do not
+   move. Putting it among the controls instead stretched that group and pushed
+   the whole header onto a second row the moment a message appeared. */
+.walletnote{
+  flex:1 0 100%;margin:14px 0 0;
+  font-size:12px;line-height:1.5;color:var(--text-secondary);
+  white-space:normal;text-wrap:pretty;
+  text-align:right;
+}
+@media (max-width:720px){
+  /* The controls are left-aligned at this width, so the note follows them. */
+  .walletnote{text-align:left;margin-top:10px}
+}
+
+/* A wallet that is connected but pointed at the wrong proof server. Warmer than
+   a refusal, louder than the ordinary note, because the failure it predicts is
+   a silent five-minute hang rather than an error. */
+.walletnote.warn{color:var(--warn,#8a5a00);font-weight:500}
+:root:not([data-theme="light"]) .walletnote.warn{color:var(--warn-dark,#e8b964)}
+@media (prefers-color-scheme:light){
+  :root:not([data-theme="dark"]) .walletnote.warn{color:var(--warn,#8a5a00)}
+}
+:root[data-theme="dark"] .walletnote.warn{color:var(--warn-dark,#e8b964)}
+
+.linkbtn{
+  border:0;background:none;padding:0;font:inherit;color:var(--accent-dark);
+  cursor:pointer;text-decoration:underline;text-underline-offset:3px;
+}
+.linkbtn:hover{color:var(--text-primary)}
+
+.themebtn{
+  border:1px solid var(--line);background:var(--glass-bg);color:var(--text-secondary);
+  width:44px;height:44px;border-radius:999px;font:inherit;font-size:15px;cursor:pointer;
+  display:grid;place-items:center;transition:.15s;backdrop-filter:blur(var(--glass-blur));
+  /* flex:none, or the narrow header squeezes it to 40px and it stops being a
+     44px tap target on exactly the device where that matters. */
+  flex:none;
+}
+.themebtn:hover{color:var(--text-primary);background:var(--glass-hover)}
+
+.tabs{display:flex;gap:8px;margin-bottom:28px;flex-wrap:wrap}
+.tab{
+  border:1px solid var(--line);background:var(--glass-bg);color:var(--nav-inactive-text);
+  padding:13px 18px;border-radius:999px;font:inherit;font-size:14px;line-height:18px;cursor:pointer;
+  transition:.15s;backdrop-filter:blur(var(--glass-blur));
+}
+.tab:hover{color:var(--text-primary);background:var(--glass-hover)}
+.tab[aria-selected="true"]{
+  background:var(--nav-active-bg);color:var(--nav-active-text);border-color:var(--nav-active-bg);
+}
+.panel{outline-offset:6px}
+
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,320px),1fr));gap:20px}
+.card{
+  background:var(--glass-bg);backdrop-filter:blur(var(--glass-blur));
+  border:1px solid var(--line);border-radius:14px;padding:32px;box-shadow:var(--glass-shadow);
+  min-width:0;
+}
+.card h2{margin:0 0 10px;font-size:25px;line-height:1.08;font-weight:700;letter-spacing:-.045em}
+.card p.sub{margin:0 0 24px;color:var(--text-secondary);font-size:16px;line-height:26px}
+
+/* Kicker, brand kit 13/20 semibold, uppercase with wide tracking. Graphite
+   rather than Fog: Fog is a 2.45:1 hairline at this size and these are the
+   labels on every form field.
+   Scoped away from .btn, because the file picker is a <label> wearing a
+   button, and it must match the button beside it rather than the kickers. */
+label:not(.btn){
+  display:block;font-family:"JetBrains Mono",ui-monospace,monospace;
+  font-size:11.5px;line-height:20px;font-weight:600;letter-spacing:.14em;text-transform:uppercase;
+  color:var(--text-secondary);margin:0 0 8px;
+}
+input,select,textarea{
+  width:100%;border:1px solid var(--line);background:var(--field);border-radius:14px;
+  font:inherit;font-size:15px;color:var(--text-primary);outline:none;transition:.15s;
+}
+input,select{height:48px;padding:0 16px}
+input:focus,select:focus,textarea:focus{
+  border-color:var(--accent);box-shadow:0 0 0 4px var(--accent-bg);
+}
+.field{margin-bottom:18px}
+.counter{
+  font-family:"JetBrains Mono",ui-monospace,monospace;font-size:11.5px;
+  color:var(--text-secondary);
+}
+.counter.over{color:var(--redline-dark);font-weight:600}
+
+.btn{
+  width:100%;height:56px;border:0;border-radius:14px;
+  background:var(--nav-active-bg);color:var(--nav-active-text);
+  font:inherit;font-size:15px;font-weight:500;cursor:pointer;transition:.15s;
+}
+.btn:hover:not([aria-disabled="true"]):not(:disabled){opacity:.88}
+/* aria-disabled rather than disabled, so a long-running button keeps focus and
+   keeps announcing. The handler returns early instead. */
+/* Veil rather than the tertiary grey: Graphite on tertiary measured 3.96:1,
+   and a disabled button that cannot be read is worse than one that is loud. */
+.btn[aria-disabled="true"],.btn:disabled{
+  background:var(--veil);color:var(--text-secondary);cursor:not-allowed;
+  box-shadow:inset 0 0 0 1px var(--line);
+}
+.btn.ghost{background:transparent;color:var(--text-primary);border:1px solid var(--line)}
+.btn.ghost:hover:not([aria-disabled="true"]):not(:disabled){background:var(--glass-hover);opacity:1}
+.btn.ghost[aria-disabled="true"]{background:transparent;color:var(--text-secondary)}
+.btn.small{height:44px;font-size:14px;width:auto;padding:0 20px}
+
+.badge{
+  display:inline-flex;align-items:center;gap:7px;
+  font-family:"JetBrains Mono",ui-monospace,monospace;
+  font-size:11px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;
+  padding:7px 12px;border-radius:999px;border:1px solid;white-space:nowrap;
+}
+.badge.ok{color:var(--accent-dark);background:var(--accent-bg);border-color:var(--accent-line)}
+.badge.no{color:var(--redline);background:var(--redline-bg);border-color:var(--redline-line)}
+.badge.info{color:var(--info-dark);background:var(--info-bg);border-color:var(--info-line)}
+.badge.warn{color:var(--warning-dark);background:var(--warning-bg);border-color:var(--warning-line)}
+
+.stmt{
+  border-radius:14px;padding:36px;border:1px solid var(--line);
+  background:var(--glass-bg);backdrop-filter:blur(var(--glass-blur));box-shadow:var(--glass-shadow);
+  min-width:0;
+}
+.verdict{display:flex;align-items:center;gap:16px;margin-bottom:8px}
+.mark{width:56px;height:56px;border-radius:14px;display:grid;place-items:center;font-size:26px;flex:none}
+.mark.ok{background:var(--accent-bg);color:var(--accent-dark)}
+.mark.no{background:var(--redline-bg);color:var(--redline)}
+.claim{font-size:30px;line-height:1.02;font-weight:700;letter-spacing:-.05em;min-width:0;overflow-wrap:anywhere}
+.meta{
+  margin-top:22px;padding-top:22px;border-top:1px solid var(--line);
+  display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:18px 22px;
+}
+.meta div{min-width:0}
+.meta div span{
+  display:block;font-family:"JetBrains Mono",ui-monospace,monospace;
+  font-size:11px;line-height:16px;font-weight:600;letter-spacing:.14em;text-transform:uppercase;
+  color:var(--text-secondary);margin-bottom:6px;
+}
+.meta div b{font-size:14.5px;font-weight:500;overflow-wrap:anywhere;line-height:1.4}
+/* A blacked-out value. brand-kit.css `.bk-redacted-line span`: a solid Ink
+   bar, 12px tall, 2px radius, sitting 1px below the baseline. The width here
+   comes from the value it replaces rather than the kit's fixed 28px, because
+   this is a redaction of something real rather than a decorative mark. */
+.redact{
+  display:inline-block;background:var(--redact);color:transparent;border-radius:2px;
+  padding:0 10px;line-height:12px;vertical-align:-1px;user-select:none;
+}
+.readers{
+  margin-top:22px;padding-top:22px;border-top:1px solid var(--line);
+}
+/* Group heading. This is the kit's kicker, and the kit's kicker is Cipher
+   (brand-kit.css `.bk-kicker`), at mono 600 with .14em tracking. Cipher itself
+   is 3.77:1 on paper, which clears the 3:1 large-text bar the kit uses it at
+   but not the 4.5:1 small-text bar, so small kickers take the Cipher family's
+   dark step. Same hue, same role, readable at 11.5px. */
+.kicker{
+  margin:26px 0 12px;font-family:"JetBrains Mono",ui-monospace,monospace;
+  font-size:11.5px;line-height:20px;font-weight:600;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--accent-dark);
+  display:flex;align-items:center;gap:10px;
+}
+.kicker::after{content:"";flex:1;height:1px;background:var(--line)}
+/* The withheld group is marked with the redaction bar, the same gesture the
+   amounts themselves wear. */
+.kicker.withheld::before{
+  content:"";width:22px;height:9px;border-radius:2px;background:var(--redact);flex:none;
+}
+.card>.kicker:first-of-type{margin-top:4px}
+
+.readers h3{
+  margin:0 0 10px;font-family:"JetBrains Mono",ui-monospace,monospace;font-size:11.5px;
+  line-height:20px;font-weight:600;letter-spacing:.14em;text-transform:uppercase;
+  color:var(--text-secondary);
+}
+.readers p{margin:0;font-size:13.5px;line-height:1.6;color:var(--text-secondary)}
+.chip{
+  display:inline-block;background:var(--bg-primary);border:1px solid var(--line);border-radius:999px;
+  padding:6px 12px;margin:0 7px 7px 0;font-size:12.5px;color:var(--text-primary);
+  font-family:Outfit,sans-serif;letter-spacing:0;text-transform:none;
+}
+.chip.muted{color:var(--text-secondary);border-style:dashed}
+
+.log{
+  margin-top:22px;font-size:12px;color:var(--text-secondary);
+  font-family:"JetBrains Mono",ui-monospace,monospace;
+  background:var(--glass-bg);border:1px solid var(--line);border-radius:14px;padding:16px;
+  max-height:220px;overflow:auto;white-space:pre-wrap;overflow-wrap:anywhere;
+  backdrop-filter:blur(var(--glass-blur));
+}
+.empty{color:var(--text-secondary);font-size:14px;padding:26px 0;text-align:center}
+.rowlist{display:flex;flex-direction:column;gap:10px;list-style:none;margin:0;padding:0}
+.row{
+  display:flex;align-items:center;justify-content:space-between;gap:14px;padding:15px 18px;
+  border:1px solid var(--line);border-radius:14px;background:var(--veil);
+}
+.row>*{min-width:0}
+.row>.badge,.row>.btnrow,.row>.redact{flex:none}
+/* A counterparty name is whatever the bank wrote. Wrap it rather than let it
+   escape the card, but clamp it to two lines so one long name cannot push a
+   row four lines tall; the full value stays available as a tooltip. */
+.row b{
+  font-weight:500;font-size:14.5px;overflow-wrap:anywhere;
+  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;
+}
+.row small{color:var(--text-secondary);font-size:12.5px;display:block;margin-top:3px;overflow-wrap:anywhere}
+.note{font-size:13px;color:var(--text-secondary);line-height:1.6;margin-top:14px}
+
+.sharebar{
+  display:flex;align-items:center;gap:10px;margin-top:22px;padding-top:22px;
+  border-top:1px solid var(--line);flex-wrap:wrap;
+}
+.sharebar code{
+  font-family:"JetBrains Mono",ui-monospace,monospace;font-size:12px;
+  color:var(--text-secondary);background:var(--bg-primary);border:1px solid var(--line);
+  border-radius:10px;padding:9px 12px;overflow-wrap:anywhere;flex:1;min-width:200px;
+}
+
+/* --- record / import --- */
+textarea{
+  min-height:150px;resize:vertical;padding:14px 16px;font-size:13px;line-height:1.65;
+  font-family:"JetBrains Mono",ui-monospace,monospace;
+}
+textarea::placeholder{color:var(--text-secondary)}
+.btnrow{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+/* The file input stays in the accessibility tree and keeps its own focus and
+   activation. It is laid over the label at zero opacity rather than hidden,
+   because `hidden` makes the control unreachable by keyboard entirely. */
+.filebtn{
+  position:relative;display:inline-flex;align-items:center;justify-content:center;
+  cursor:pointer;overflow:hidden;
+}
+.filebtn input[type="file"]{
+  position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:pointer;
+  font-size:0;padding:0;border:0;background:none;
+}
+.filebtn:focus-within{outline:2px solid var(--accent);outline-offset:3px}
+.statrow{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;margin-top:20px}
+.statrow .stat{
+  background:var(--bg-primary);border:1px solid var(--line);border-radius:14px;padding:14px 16px;
+  display:flex;flex-direction:column;gap:5px;min-width:0;
+}
+.statrow .stat span{
+  font-size:clamp(15px,1.5vw,19px);font-weight:600;letter-spacing:-.06em;
+  font-variant-numeric:tabular-nums;overflow-wrap:anywhere;
+}
+.statrow .stat small{
+  font-family:"JetBrains Mono",ui-monospace,monospace;
+  font-size:10.5px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;
+  color:var(--text-secondary);overflow-wrap:anywhere;
+}
+.callout{
+  border:1px solid var(--line);border-left:2px solid var(--accent);background:var(--bg-primary);
+  border-radius:0 14px 14px 0;padding:16px 18px;display:flex;flex-direction:column;gap:6px;
+  min-width:0;
+}
+.callout b{font-size:14.5px;font-weight:500;overflow-wrap:anywhere}
+.callout span{font-size:13.5px;color:var(--text-secondary);line-height:1.55;overflow-wrap:anywhere}
+.callout.warn{border-left-color:var(--warning-dark)}
+.callout.bad{border-left-color:var(--redline-dark)}
+
+.grid-stmt{grid-template-columns:minmax(0,1.15fr) minmax(0,.85fr)}
+@media (max-width:820px){ .grid-stmt{grid-template-columns:1fr} }
+@media (max-width:640px){
+  .wrap{padding:24px 16px 72px}
+  .card,.stmt{padding:24px}
+  .meta{grid-template-columns:1fr 1fr}
+  /* Side by side, one label wraps to two lines and the other does not, which
+     left the two values sitting at different heights. Reserve two lines for
+     every label so the numbers line up. */
+  .meta div span{min-height:32px}
+  .top{align-items:flex-start;flex-direction:column;gap:12px}
+  /* Three pills will not fit one narrow row. They wrap as whole units and
+     never break a word: at 390px the wallet pill was being crushed into
+     "No / wall / et". The network pill keeps its ellipsis and gives up its
+     address first, since that is the least important thing in the header. */
+  .topright{width:100%;flex-wrap:wrap;justify-content:flex-start;gap:8px}
+  .netpill{min-width:0;flex:0 1 auto}
+  .netpill .addr{display:none}
+  .walletpill{flex:0 0 auto}
+  .log{font-size:11px}
+  .claim{font-size:24px;line-height:28px}
+}
+/* No border-radius here: it would overwrite every control's own corner on
+   keyboard focus, so a pill button squared off the moment you tabbed to it. */
+:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
+@media (prefers-reduced-motion: reduce){ *{transition:none !important} }
+
+/* Help text under a field: sentence case, never the kicker treatment. */
+.help{
+  font-size:13px;line-height:19px;color:var(--text-secondary);
+  margin:8px 0 0;
+}
+.field .help{margin-bottom:0}
+.prefixed{position:relative;display:flex;align-items:center}
+.prefixed .prefix{
+  position:absolute;left:16px;color:var(--text-secondary);font-size:15px;pointer-events:none;
+}
+.prefixed input{padding-left:32px}
+
+/* --- print ---
+   A statement is the one thing here somebody prints or saves as a PDF, so it
+   gets a sheet of its own. Three things matter: the redaction bars must survive
+   (a stripped background would blank the value, but an ink-saving setting must
+   never turn them back into readable text), the page must not carry the app's
+   furniture, and the printed copy must say where to verify itself. */
+@media print {
+  :root, :root[data-theme="dark"] {
+    --bg-primary:#fff; --bg-secondary:#fff; --glass-bg:#fff; --glass-shadow:none;
+    --text-primary:#000; --text-secondary:#333; --line:#bbb; --veil:#fff;
+    --redact:#000; --accent-dark:#065F46; --redline-dark:#7C2D12;
+  }
+  body{background:#fff !important;background-image:none !important;color:#000}
+  .wrap{max-width:none;padding:0}
+
+  /* The app's furniture is not part of the artifact. */
+  .tabs, .themebtn, .walletpill, .netpill, .log, .btn, .btnrow, .filebtn { display:none !important }
+
+  .card, .stmt{
+    border:1px solid #bbb;border-radius:0;box-shadow:none;backdrop-filter:none;
+    padding:18px;break-inside:avoid;
+  }
+  .grid, .grid-stmt{display:block}
+  .grid > * + *{margin-top:14px}
+
+  /* Keep the bar solid and opaque even where the browser is saving ink. */
+  .redact{
+    background:#000 !important;color:transparent !important;
+    -webkit-print-color-adjust:exact;print-color-adjust:exact;
+  }
+
+  /* A printed statement should carry the address that proves it. */
+  .sharebar code{border:0;padding:0;background:none}
+  .sharebar::after{
+    content:"Verify this statement at the address above.";
+    display:block;margin-top:6px;font-size:11px;color:#333;
+  }
+  .row, .meta, .verdict, .readers{break-inside:avoid}
+  a[href]::after{content:" (" attr(href) ")";font-size:10px;color:#333}
+}

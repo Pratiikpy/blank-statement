@@ -1,0 +1,21 @@
+node_modules/
+contracts/out/
+*.log
+logs/
+.DS_Store
+
+# A deployment this machine paid for: the contract address and each holder's
+# anchored run. Local to whoever ran it, and meaningless on another chain.
+.bridge-state-*.json
+
+# The relay's compiled output.
+fee-relay/dist/
+
+# Anything holding a key or a password. Nothing in this repo should, but the
+# rule is cheaper than the incident.
+.env
+.env.*
+!.env.example
+*.seed
+RECOVERY.txt
+*.bak
