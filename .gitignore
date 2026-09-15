@@ -19,3 +19,7 @@ fee-relay/dist/
 *.seed
 RECOVERY.txt
 *.bak
+
+# Recording artefacts. The scripts that produce them are tracked; the video is
+# a build output, and a 20MB mp4 in git history is there forever.
+demo/out/

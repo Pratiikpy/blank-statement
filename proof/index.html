@@ -1,0 +1,207 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>blank. statement — proof</title>
+<meta name="description" content="Prove you received at least X without revealing amounts, counterparties or totals. Evidence from a real public chain." />
+<style>
+:root{
+  --bg:#fbfbfa; --fg:#14151a; --muted:#5f6470; --card:#fff; --border:#e6e6e3;
+  --accent:#3b2fb8; --good:#0a7d55; --bad:#b4342a; --warn:#8a5a00; --link:#1d4ed8;
+  --mono:ui-monospace,SFMono-Regular,Menlo,monospace;
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --bg:#111113; --fg:#f5f5f7; --muted:#9aa0ac; --card:#18181b; --border:#2a2a2f;
+    --accent:#a99cff; --good:#4ade80; --bad:#f87171; --warn:#e8b964; --link:#8ab4ff;
+  }
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0;background:var(--bg);color:var(--fg);
+  font-family:-apple-system,BlinkMacSystemFont,"Inter",system-ui,sans-serif;
+  -webkit-font-smoothing:antialiased}
+.page{max-width:1080px;margin:0 auto;padding:48px 24px 96px}
+.hero{padding:56px 0 24px}
+.hero h1{font-size:56px;line-height:1.02;margin:0 0 16px;letter-spacing:-.03em}
+.hero h1 span{color:var(--muted)}
+.hero p{font-size:21px;line-height:1.45;color:var(--muted);max-width:660px;margin:0}
+.eyebrow{font-size:12px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;
+  color:var(--accent);margin-bottom:10px}
+.section{margin-top:64px}
+.section h2{font-size:30px;letter-spacing:-.02em;margin:0 0 8px}
+.lede{font-size:17px;color:var(--muted);line-height:1.6;max-width:680px;margin:0 0 24px}
+.card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:20px 24px}
+.grid{display:grid;gap:14px;grid-template-columns:repeat(auto-fit,minmax(210px,1fr))}
+.stat{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:18px 20px}
+.stat b{display:block;font-size:28px;letter-spacing:-.02em;margin-bottom:2px}
+.stat span{font-size:13px;color:var(--muted);line-height:1.4;display:block}
+.mono{font-family:var(--mono);font-size:13px;word-break:break-all}
+.kv{margin:0;font-size:14px}
+.kv div{display:flex;gap:12px;padding:7px 0;border-bottom:1px solid var(--border);flex-wrap:wrap}
+.kv div:last-child{border-bottom:0}
+.kv dt{color:var(--muted);min-width:180px;flex:0 0 auto}
+.kv dd{margin:0;font-family:var(--mono);font-size:13px;word-break:break-all;flex:1 1 220px}
+.quote{border-left:3px solid var(--accent);padding:4px 0 4px 18px;margin:20px 0;
+  font-size:17px;line-height:1.5}
+.ok{color:var(--good);font-weight:600}
+.no{color:var(--bad);font-weight:600}
+table{width:100%;border-collapse:collapse;font-size:14px;margin-top:8px}
+th,td{text-align:left;padding:9px 12px;border-bottom:1px solid var(--border)}
+th{font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);font-weight:600}
+td.n{font-family:var(--mono);white-space:nowrap}
+.wrap{overflow-x:auto}
+footer{margin-top:88px;padding-top:24px;border-top:1px solid var(--border);
+  font-size:13px;color:var(--muted);line-height:1.6}
+a{color:var(--link)}
+@media (max-width:720px){
+  .hero h1{font-size:38px}
+  .hero p{font-size:18px}
+  .kv dt{min-width:0;flex:1 1 100%}
+}
+</style>
+</head>
+<body>
+<div class="page">
+
+<header class="hero">
+  <div class="eyebrow">Proof &mdash; Midnight</div>
+  <h1>blank.<span> statement</span></h1>
+  <p>Prove you received at least X. The amounts, the counterparties and the
+     total never leave your machine. Everything below happened on a public
+     chain, and every number is a read, not a claim.</p>
+</header>
+
+<div class="grid">
+  <div class="stat"><b>32/32</b><span>adversarial &mdash; every way to cheat, refused</span></div>
+  <div class="stat"><b>47/47</b><span>multi-user, two real browser sessions</span></div>
+  <div class="stat"><b>21/21</b><span>circuit asserts forced to fire</span></div>
+  <div class="stat"><b>294</b><span>screenshots, read by eye</span></div>
+</div>
+
+<section class="section">
+  <h2>What it does</h2>
+  <p class="lede">A verifier posts an ask &mdash; <em>show me you cleared
+  &pound;250</em>. The holder answers with one sentence backed by their own
+  receipts. The chain holds a verdict and a nullifier. It does not hold the
+  money.</p>
+  <div class="quote">&ldquo;&check; Met &pound;250.00. Checked against the anchored record.&rdquo;</div>
+  <p class="lede">Receipts become a hash-chained run of checkpoints, anchored in
+  a Merkle tree. A statement is a zero-knowledge proof that the run leads to the
+  anchored root and clears the threshold. It answers exactly once.</p>
+</section>
+
+<section class="section">
+  <h2>On a chain nobody here controls</h2>
+  <p class="lede">Not a local devnet. Midnight <strong>preview</strong>, deployed
+  and paid for from a real wallet.</p>
+  <div class="card">
+    <dl class="kv">
+      <div><dt>Contract</dt><dd>f040eaea35064ad5e67015efb5e138200c8a771ec884768233590a1291546794</dd></div>
+      <div><dt>Anchor tx</dt><dd>129ec921e18b81bfa1982c2adda79af4fdb196bc779cd0816d64d8234d7a1226</dd></div>
+      <div><dt>Ask tx</dt><dd>f334c3d47417f0fdc1744c3800fb4cb818ea08db10b1c7da16f070c34fa7c394</dd></div>
+      <div><dt>Browser-signed write</dt><dd>0453f1241d7d60df917ed711a73299a00fa421f9b576deed9666f9e1dc6bcfc9 &middot; block 57512</dd></div>
+      <div><dt>Checkpoints anchored</dt><dd>32, across two holders</dd></div>
+      <div><dt>Fee</dt><dd>paid in DUST from the wallet &mdash; balance read before and after</dd></div>
+    </dl>
+  </div>
+</section>
+
+<section class="section">
+  <h2>The privacy claim, measured</h2>
+  <p class="lede">Read the ledger directly, with its own client, not through the
+  app. These are the only fields a verdict carries.</p>
+  <div class="card">
+    <p style="margin:0 0 10px;font-size:14px"><span class="ok">On chain:</span>
+      <span class="mono">met, threshold, concentrationOk, batches, receiptCount, verifierPk</span></p>
+    <p style="margin:0;font-size:14px"><span class="no">Never on chain:</span>
+      <span class="mono">amounts, counterparties, totals, the holder&rsquo;s key</span></p>
+  </div>
+  <p class="lede" style="margin-top:20px">The threshold is on the verdict on
+  purpose. Without it a statement never says <em>which</em> amount it answers,
+  and an answer to a penny reads identically to an answer to a thousand pounds.
+  It is the verifier&rsquo;s own figure and was already public.</p>
+  <p class="lede">What a verifier does learn: the number they asked for, and
+  whether it was met. Repeated asks at different thresholds narrow a total by
+  bisection &mdash; inherent to answering at all, and stated rather than hidden.</p>
+</section>
+
+<section class="section">
+  <h2>What cannot be faked</h2>
+  <p class="lede">Every assert in the circuit was forced to fire. None can be
+  reached through the interface, because the interface builds honest witnesses
+  &mdash; so the tests lie to the contract directly.</p>
+  <div class="wrap"><table>
+    <tr><th>The lie</th><th>What the chain says</th></tr>
+    <tr><td>Inflate a total inside your own run</td><td class="n">broken checkpoint chain</td></tr>
+    <tr><td>Prove a checkpoint against a different tree</td><td class="n">checkpoint not in tree</td></tr>
+    <tr><td>Claim more receipts than the batch holds</td><td class="n">a counted slot holds no receipt</td></tr>
+    <tr><td>Hide a receipt the batch did not count</td><td class="n">an uncounted slot holds a receipt</td></tr>
+    <tr><td>Name the same client twice in one batch</td><td class="n">duplicate counterparty</td></tr>
+    <tr><td>Answer an ask written for someone else</td><td class="n">not the holder this was asked of</td></tr>
+    <tr><td>Answer the same ask twice</td><td class="n">statement already used</td></tr>
+  </table></div>
+  <p class="lede" style="margin-top:20px">Each refusal has a sentence the app can
+  show a person. Before this work, not one had ever been produced &mdash; a
+  message nobody has seen fire is a guess.</p>
+</section>
+
+<section class="section">
+  <h2>Tested as a person uses it</h2>
+  <p class="lede">Every button, field, dropdown and key handler operated by hand,
+  on the public chain, with the outcome checked against the ledger rather than
+  the screen.</p>
+  <div class="wrap"><table>
+    <tr><th>Suite</th><th>On preview</th><th>What it covers</th></tr>
+    <tr><td class="n">journey</td><td class="n ok">9/9</td><td>ask &rarr; answer &rarr; statement, end to end</td></tr>
+    <tr><td class="n">adversarial</td><td class="n ok">32/32</td><td>expired, twice-answered, someone else&rsquo;s, forged</td></tr>
+    <tr><td class="n">multiparty</td><td class="n ok">47/47</td><td>two holders, isolated browser contexts</td></tr>
+    <tr><td class="n">visual</td><td class="n ok">72/72</td><td>4 tabs &times; 2 viewports &times; light and dark</td></tr>
+    <tr><td class="n">controls</td><td class="n ok">30/30</td><td>every input, its limits and its refusals</td></tr>
+    <tr><td class="n">leftovers</td><td class="n ok">18/18</td><td>the controls other suites only half-drove</td></tr>
+  </table></div>
+  <p class="lede" style="margin-top:20px">Plus 89 unit tests, three browser
+  engines (Chromium, Firefox, WebKit), three device sizes, and the wallet driven
+  through every state it has &mdash; absent, declined, disconnected mid-question,
+  and removed after connecting.</p>
+</section>
+
+<section class="section">
+  <h2>Five defects found, five fixed</h2>
+  <p class="lede">Testing that finds nothing has not been done. These are the
+  ones worth naming.</p>
+  <div class="wrap"><table>
+    <tr><th>#</th><th>What was wrong</th><th>Why it mattered</th></tr>
+    <tr><td class="n">01</td><td>A statement did not say which amount it answered</td><td>A 1p proof was character-identical to a &pound;250 proof</td></tr>
+    <tr><td class="n">02</td><td>The ask form emptied on a tab switch</td><td>Silent data loss mid-task</td></tr>
+    <tr><td class="n">03</td><td>The fee relay spent from the app&rsquo;s own wallet</td><td>Collides under load, and the failure lands on the user</td></tr>
+    <tr><td class="n">04</td><td>The wallet proof server survived a network switch</td><td>A public write hung 313s instead of failing</td></tr>
+    <tr><td class="n">05</td><td>The app said &ldquo;Local network&rdquo; while on preview</td><td>A public chain reading as private</td></tr>
+  </table></div>
+  <p class="lede" style="margin-top:20px">01 needed a contract change and a
+  redeploy. 05 only became visible the first time the product was pointed at a
+  second network, which is the argument for testing on one.</p>
+</section>
+
+<section class="section">
+  <h2>What is not covered</h2>
+  <p class="lede">Stated rather than left for someone to find.</p>
+  <div class="card">
+    <dl class="kv">
+      <div><dt>Real phone</dt><dd>simulated device profiles only</dd></div>
+      <div><dt>Screen reader</dt><dd>accessibility tree read; NVDA and VoiceOver not run</dd></div>
+      <div><dt>preprod</dt><dd>reads and wallet verified; no writes, the wallet holds nothing there</dd></div>
+      <div><dt>Proving location</dt><dd>the app proves on its bridge, not in the wallet. The header says so.</dd></div>
+    </dl>
+  </div>
+</section>
+
+<footer>
+  <p>blank. statement &mdash; zero-knowledge income proofs on Midnight.
+     Evidence gathered on Midnight preview. Every figure above is a read from the
+     chain or the output of a suite that can be re-run.</p>
+</footer>
+
+</div>
+</body>
+</html>

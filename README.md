@@ -9,6 +9,9 @@ can never be passed off as a yes.
 
 Built on Midnight, ledger 8, Compact toolchain 0.31.1.
 
+**[Read the overview](https://comfortable-goal-205.notion.site/blank-statement-3dc9c0ce787681bca1eaffe7f53b9804)**
+— what it is, how it works, what is proven on a public chain, and what is not.
+
 ---
 
 ## What is actually true right now
