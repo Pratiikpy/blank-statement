@@ -27,7 +27,48 @@ function serveContractArtifacts() {
     '.verifier': 'application/octet-stream',
   };
   return {
-    name: 'serve-contract-artifacts',
+    name: 'contract-artifacts',
+    /**
+     * A build has no middleware, so the same files have to be copied into the
+     * output under the same URL. Without this the page loads, the wallet
+     * connects, and proving hangs on a 404 that never surfaces as an error
+     * because it is swallowed inside the proving step.
+     */
+    async generateBundle() {
+      const { readdirSync, readFileSync } = await import('node:fs');
+      const walk = (dir, base = '') => readdirSync(dir, { withFileTypes: true })
+        .flatMap((e) => (e.isDirectory()
+          ? walk(join(dir, e.name), `${base}${e.name}/`)
+          : [`${base}${e.name}`]));
+      for (const rel of walk(root)) {
+        this.emitFile({
+          type: 'asset',
+          fileName: `contracts/out/${rel}`,
+          source: readFileSync(join(root, rel)),
+        });
+      }
+      // midday's ZkConfig.fromUrl asks for <circuit>/prover-key rather than
+      // keys/<circuit>.prover, so both spellings are emitted. The dev
+      // middleware aliases them; a static host cannot.
+      for (const f of readdirSync(join(root, 'keys'))) {
+        const m = f.match(/^(.+)\.(prover|verifier)$/);
+        if (!m) continue;
+        this.emitFile({
+          type: 'asset',
+          fileName: `contracts/out/${m[1]}/${m[2]}-key`,
+          source: readFileSync(join(root, 'keys', f)),
+        });
+      }
+      for (const f of readdirSync(join(root, 'zkir'))) {
+        const m = f.match(/^(.+)\.bzkir$/);
+        if (!m) continue;
+        this.emitFile({
+          type: 'asset',
+          fileName: `contracts/out/${m[1]}/zkir`,
+          source: readFileSync(join(root, 'zkir', f)),
+        });
+      }
+    },
     configureServer(server) {
       server.middlewares.use('/contracts/out', (req, res, next) => {
         // normalize collapses any ../ before it can climb out of the directory.
@@ -62,13 +103,25 @@ function serveContractArtifacts() {
   };
 }
 
-export default defineConfig({
+export default defineConfig(({ command }) => ({
   root: new URL('.', import.meta.url).pathname,
   // Midnight's ledger and runtime are WebAssembly imported the ESM way, which
   // Vite will not load on its own: "ESM integration proposal for Wasm is not
   // supported". Both plugins are needed together, because those modules use
   // top-level await to instantiate.
-  plugins: [wasm(), topLevelAwait(), react(), serveContractArtifacts()],
+  // topLevelAwait only in dev.
+  //
+  // build.target is esnext, which supports top-level await natively, so the
+  // transform has nothing to do there — and running it anyway fails outright
+  // ("missing field `type`") the moment the SDK lands in a production chunk,
+  // which it does now that the app proves in the browser. Dev still needs it,
+  // because esbuild's dependency pre-bundle does not target esnext.
+  plugins: [
+    wasm(),
+    ...(command === 'serve' ? [topLevelAwait()] : []),
+    react(),
+    serveContractArtifacts(),
+  ],
   optimizeDeps: {
     // Only the three packages that actually carry .wasm are held back from the
     // dependency pre-bundle, because esbuild cannot follow a wasm import.
@@ -101,4 +154,4 @@ export default defineConfig({
       '/idx': { target: 'http://127.0.0.1:8188', changeOrigin: true, rewrite: p => p.replace(/^\/idx/, '') },
     },
   },
-});
+}));

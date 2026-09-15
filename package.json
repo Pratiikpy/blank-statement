@@ -53,7 +53,10 @@
     "qa:preview-dust": "node tests/preview-dust.mjs",
     "qa:preview-write": "node tests/preview-write.mjs",
     "qa:relay-guard": "node --test tests/relay-seed-guard.test.mjs",
-    "qa:prover-mismatch": "node --test tests/prover-mismatch.test.mjs"
+    "qa:prover-mismatch": "node --test tests/prover-mismatch.test.mjs",
+    "build": "vite build --config app/vite.config.js",
+    "serve:dist": "node demo/serve-dist.mjs",
+    "qa:browser-native": "node tests/browser-native.mjs"
   },
   "dependencies": {
     "@no-witness-labs/midday-sdk": "0.6.4",

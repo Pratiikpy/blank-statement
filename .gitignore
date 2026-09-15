@@ -23,3 +23,10 @@ RECOVERY.txt
 # Recording artefacts. The scripts that produce them are tracked; the video is
 # a build output, and a 20MB mp4 in git history is there forever.
 demo/out/
+
+# Build output. 62MB, most of it the prover keys copied in for static hosting,
+# and every byte reproducible with `npm run build`.
+app/dist/
+
+# Vercel's local project link.
+.vercel/

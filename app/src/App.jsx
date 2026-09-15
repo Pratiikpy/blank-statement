@@ -5,46 +5,74 @@ import { parseCsv, toBatches, summarise, parseAmount, STATEMENT_CAPACITY } from 
 import { walletStatus, connect as connectWallet } from './wallet.js';
 import { money, moneyInput } from '../money.mjs';
 
-const API = 'http://127.0.0.1:8790';
+import * as client from './client.js';
 
 /**
- * Never let a transport failure or a non-JSON body reach a caller as a thrown
- * promise: every screen would have to guard it, and the ones that forgot pinned
- * their button in its busy label forever.
+ * Which chain this build talks to, and who pays the fee.
+ *
+ * Both are build-time choices rather than code: the same bundle serves a local
+ * devnet and a public network, and a deployment that wants to sponsor fees
+ * points at a relay without a rebuild of anything else.
  */
-async function call(path, init, timeoutMs) {
-  let r;
-  // A refused connection rejects quickly, but a half-open socket or a proxy
-  // that swallows the request does not reject at all. Without a deadline the
-  // poll simply never resolves and the screen sits on "Connecting…" forever,
-  // which is the one failure mode that looks like the product is fine.
-  const ac = new AbortController();
-  const timer = timeoutMs ? setTimeout(() => ac.abort(), timeoutMs) : null;
+const NETWORK = import.meta.env?.VITE_NETWORK ?? 'undeployed';
+const FEE_RELAY = import.meta.env?.VITE_FEE_RELAY ?? null;
+/**
+ * The contract everyone shares. Without this each visitor deploys their own,
+ * which costs them a fee and puts them on a ledger nobody else can read — so
+ * a verifier would be sent a statement that does not exist on the contract
+ * they are looking at. Unset means deploy, which is what a developer on a
+ * local chain wants.
+ */
+const CONTRACT = import.meta.env?.VITE_CONTRACT ?? null;
+
+/**
+ * The screens were written against a small HTTP surface, back when a local
+ * bridge held the wallet and did the proving. There is no bridge now: the
+ * wallet signs and this browser proves, because whatever proves sees the
+ * receipt amounts, and a hosted copy of everyone's receipts is the one thing
+ * this product must never become.
+ *
+ * Rather than rewrite every screen, the same six calls are routed to the
+ * in-browser client. The shape a screen sees is unchanged, including the
+ * refusal shape, so every message and every guard still works.
+ */
+async function route(path, body) {
   try {
-    r = await fetch(API + path, { ...init, signal: ac.signal });
-  } catch {
-    return { ok: false, unreachable: true, error: 'Cannot reach the bridge.' };
-  } finally {
-    if (timer) clearTimeout(timer);
+    if (path === '/api/state') return { ok: true, ...(await client.state()) };
+    if (path.startsWith('/api/record')) {
+      const r = client.record();
+      return r ? { ok: true, ...r } : { ok: true, receipts: 0, counterparties: 0, rows: [] };
+    }
+    if (path.startsWith('/api/statement/')) {
+      const r = await client.statement(path.split('/').pop());
+      return r.ok ? r : { ok: false, status: 404, error: r.error };
+    }
+    if (path === '/api/import') return { ok: true, ...(await client.importCsv(body.csv)) };
+    if (path === '/api/request') return { ok: true, ...(await client.createRequest(body)) };
+    if (path === '/api/answer') return { ok: true, ...(await client.answerRequest(body)) };
+    return { ok: false, error: 'not found' };
+  } catch (e) {
+    // A wallet that is not connected is not a failure, it is a step the person
+    // has not taken. The screens read `unreachable` as "say so and keep what is
+    // on screen", which is exactly right here too.
+    if (!client.isOpen()) {
+      return { ok: false, unreachable: true, error: 'Connect a wallet to read the chain.' };
+    }
+    const raw = String(e?.message ?? e);
+    // The chain's own words, when it is the chain refusing.
+    const line = raw.split(String.fromCharCode(10))[0]
+      .replace(/^.*?failed to (call|submit) \w+:\s*/i, '');
+    return {
+      ok: false,
+      error: line.slice(0, 300),
+      rejected: /assert|failed|refus/i.test(raw),
+      badInput: e instanceof client.BadInput,
+    };
   }
-  let body = null;
-  try {
-    body = await r.json();
-  } catch {
-    return { ok: false, error: `The bridge answered with something that is not JSON (HTTP ${r.status}).` };
-  }
-  return { ok: r.ok, status: r.status, ...body };
 }
 
-/** Reads are on a 8s leash: they run every five seconds, so a slow one is
- *  already stale. Writes get no deadline, because anchoring a record honestly
- *  takes minutes and cutting it off would leave the chain ahead of the screen. */
-const get = (p) => call(p, undefined, 8000);
-const post = (p, b) => call(p, {
-  method: 'POST',
-  headers: { 'content-type': 'application/json' },
-  body: JSON.stringify(b),
-});
+const get = (p) => route(p);
+const post = (p, b) => route(p, b);
 
 /* ---------- numbers ---------- */
 
@@ -74,7 +102,7 @@ const REFUSALS = {
 };
 
 function refusal(r) {
-  if (r?.unreachable) return 'Cannot reach the bridge. Run npm run bridge and this page recovers on its own.';
+  if (r?.unreachable) return r.error ?? 'Connect a wallet to read the chain.';
   const raw = String(r?.error ?? 'something went wrong');
   if (REFUSALS[raw]) return REFUSALS[raw];
   if (r?.rejected) return `The chain refused it. The reason it gave: ${raw}`;
@@ -150,14 +178,16 @@ function Net({ state, error, loading }) {
 }
 
 /**
- * The wallet surface. Today it reports honestly and connects; it does not yet
- * move proving off the bridge, and the copy says so rather than implying a
- * connected wallet means the key has moved.
+ * The wallet surface. Connecting does two things a person thinks of as one:
+ * the wallet grants access, and the contract is loaded against it. After that
+ * the browser proves and the wallet signs — there is no server in the path,
+ * which is the only arrangement where "your record never leaves this machine"
+ * is a fact rather than a promise.
  */
 // The pill lives among the header controls, but its explanation needs the full
 // width of the header to read as a sentence. They cannot be one element, so the
 // state lives here and the header renders the two pieces where each belongs.
-function useWallet() {
+function useWallet(onReady) {
   const [status, setStatus] = useState(() => walletStatus());
   const [result, setResult] = useState(null);
   const [busy, setBusy] = useState(false);
@@ -196,9 +226,22 @@ function useWallet() {
     if (busy) return;
     setBusy(true);
     try {
-      const r = await connectWallet('undeployed');
+      // Connecting is two things a person thinks of as one: the wallet grants
+      // access, and the contract is loaded against it. Reporting success after
+      // only the first would leave every screen unable to read the chain while
+      // the header said "connected".
+      const r = await connectWallet(NETWORK);
       setResult(r);
-      if (r.ok) setStatus(walletStatus());
+      if (!r.ok) return;
+      setStatus(walletStatus());
+      const opened = await client.open({ networkId: NETWORK, feeRelay: FEE_RELAY, address: CONTRACT });
+      if (!opened.ok) {
+        setResult({ ...r, ok: false, state: 'failed', message: opened.message ?? 'Could not load the contract.' });
+        return;
+      }
+      onReady?.();
+    } catch (e) {
+      setResult({ ok: false, state: 'failed', message: String(e?.message ?? e).slice(0, 200) });
     } finally {
       setBusy(false);
     }
@@ -213,7 +256,7 @@ function useWallet() {
     : 'No wallet';
 
   const title = connected
-    ? `${result.name.charAt(0).toUpperCase() + result.name.slice(1)}, connector ${result.apiVersion}. Proving still happens on the bridge.`
+    ? `${result.name.charAt(0).toUpperCase() + result.name.slice(1)}, connector ${result.apiVersion}. Proving happens in this browser; your record never leaves it.`
     : (result?.message ?? status.message);
 
   // Anything the label cannot say on its own has to be on the screen, not in a
@@ -1100,7 +1143,11 @@ export default function App() {
 
   // Called before the statement route returns early: a hook that runs on one
   // route and not the other changes the hook count between renders.
-  const wallet = useWallet();
+  //
+  // Reading the chain needs the contract loaded, so the first successful
+  // connect has to pull the screens straight away rather than leaving them on
+  // "connect a wallet" until the next poll comes round.
+  const wallet = useWallet(reload);
 
   if (route.name === 'statement') return <StatementPage id={route.id} />;
 
