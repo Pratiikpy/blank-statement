@@ -9,22 +9,31 @@ can never be passed off as a yes.
 
 Built on Midnight, ledger 8, Compact toolchain 0.31.1.
 
-**[Read the overview](https://comfortable-goal-205.notion.site/blank-statement-3dc9c0ce787681bca1eaffe7f53b9804)**
-— what it is, how it works, what is proven on a public chain, and what is not.
+| | |
+|---|---|
+| **Use it** | https://blank-statement.vercel.app |
+| **Overview** | [what it is, what is proven, what is not](https://comfortable-goal-205.notion.site/blank-statement-3dc9c0ce787681bca1eaffe7f53b9804) |
+| **Proof deck** | https://blank-statement-proof.vercel.app |
+| **Contract** | `f040eaea35064ad5e67015efb5e138200c8a771ec884768233590a1291546794` on Midnight preview |
+
+There is no backend. Your wallet signs, your browser proves, and your record stays in your browser.
+That is why the live app is a static site: there is nowhere for your receipts to go.
 
 ---
 
 ## What is actually true right now
 
-This is a working prototype with real transactions on a real chain, and some real gaps. Both are
-listed here because a README that only lists the wins is how people get misled.
+A working product with real transactions on a public chain, and some real gaps. Both are listed
+here, because a README that only lists the wins is how people get misled.
 
-**Works, verified on chain** (transaction hashes and independent indexer confirmations are in
-`../EVIDENCE.md`):
+**Works, verified on Midnight preview** — a public network, fees paid from a real wallet:
 
+- **Nothing is hosted.** The wallet signs and the browser proves. There is no server in the path,
+  which is the only arrangement where "your record never leaves this machine" is a fact rather
+  than a promise. Verified against the built bundle with no bridge running: `qa:browser-native`.
 - A verifier posts an ask; it lands on chain and is publicly readable.
-- A holder answers it. The circuit folds a run of eight **batches**, checks the total against
-  a threshold it reads *from the ledger* rather than from the caller, verifies the run is anchored,
+- A holder answers it. The circuit folds a run of eight **batches**, checks the total against a
+  threshold it reads *from the ledger* rather than from the caller, verifies the run is anchored,
   burns a single-use nullifier, publishes a verdict, and closes the ask.
 - A batch is up to eight receipts reduced to `{ prev, total, count, largest }` and committed.
   Anchoring one is a single transaction however many receipts went in, and because each batch names
@@ -32,35 +41,58 @@ listed here because a README that only lists the wins is how people get misled.
   (8 batches of 8) for the same proving cost as one batch.
 - The published counts are the real ones. A batch declares how many of its eight slots hold a
   receipt, and the circuit checks that claim against the amounts themselves: a counted slot must
-  carry money and an uncounted one must not. Padding is therefore invisible in the count, and a run
-  of three real receipts publishes `receiptCount: 3`, not 64.
-- An ask can be bound to a named holder, so nobody else can answer it even with the link.
-- An ask answers once. `answerRequest` reinserts the request with `open: false`, so a second
-  attempt is refused by the contract rather than hidden by the interface.
+  carry money and an uncounted one must not. Padding is invisible in the count, so a run of three
+  real receipts publishes `receiptCount: 3`, not 64.
+- A statement names the amount it answers. Without that, a 1p proof is character-identical to a
+  £250 one, and anyone could answer a trivial ask and forward it as a serious one.
+- An ask can be bound to a named holder, and the **contract** enforces it — the refusal reads
+  `not the holder this was asked of`, not "unknown user".
+- An ask answers once. A second attempt is refused by the contract, not hidden by the interface.
 - A truthful claim publishes `met: true`. An overclaim publishes `met: false` and still produces a
-  readable artifact.
-- Replaying a spent statement, answering a closed ask, answering an expired ask, and answering an
-  ask that does not exist are each rejected, with four distinct assertion failures.
-- The whole flow runs in a browser, desktop and mobile.
+  readable artifact, so silence can never be passed off as a yes.
+- Fee sponsorship works. A browser wallet holding **zero DUST** generated its own proof and wrote
+  to preview, with a relay paying: tx `0453f1241d7d60df917ed711a73299a00fa421f9b576deed9666f9e1dc6bcfc9`.
 
 **Not true yet, and load bearing:**
 
-- **The bridge holds the key and does the proving.** A real user must hold their own key, and
-  proving has to move client side. Until that lands, the privacy claim is about what the *chain*
-  learns, not about what your own machine's helper process learns.
-- **No public testnet deployment.** A wallet sync against preprod aborted after 6 minutes at
-  7.1 GB peak RSS. A browser tab cannot do that. This needs a light-sync path before the product
-  can leave the local network.
 - **Every receipt is self-declared.** Issuer-signed evidence needs in-circuit signature
   verification, and `jubjubSchnorrVerify` does not exist in toolchain 0.31.1 (verified by
   compiling it: `unbound identifier JubjubSchnorrSignature`). Until that is solved, the artifact is
-  honest about counts and concentration but cannot vouch for origin.
-- **Fee sponsorship runs, but has never sponsored anything.** The reference relay targeted
-  ledger-v7 through wallet-sdk 1.x; it is repinned to the ledger-8 generation, builds, runs, and
-  answers `/health`, and the `/balance-finalized-tx` endpoint the client expects was added. It
-  still has not added dust to a real transaction, because the SDK only wires `feeRelay` into the
-  **browser wallet** path: a seed-based client silently ignores the option and tries to fund
-  itself. Testing sponsorship therefore needs Lace. See `fee-relay/`.
+  honest about counts and concentration but cannot vouch for origin. This is the biggest gap.
+- **Answering discloses something.** Six fields reach the chain: `met`, `threshold`,
+  `concentrationOk`, `batches`, `receiptCount`, `verifierPk`. Repeated asks at different thresholds
+  narrow a total by bisection. That is inherent to answering at all, so it is stated rather than
+  hidden behind a claim that nothing is revealed.
+- **preprod is unwritten.** Reads and the wallet are verified there; the wallet holds nothing to
+  pay with, so no write has been made.
+- **Concurrency has a measured ceiling.** Two writes from one wallet land fine. Fifteen stall
+  rather than fail — they contend for the same DUST inputs. A busier deployment wants a wallet per
+  holder and a timeout on submission.
+- **No mainnet.** Testnet is the bar until an external audit.
+
+## What cannot be faked
+
+Every assert in the circuit was forced to fire. None is reachable through the interface, because
+the interface builds honest witnesses — so the tests lie to the contract directly.
+
+| The lie | What the chain says |
+|---|---|
+| Inflate a total inside your own run | `broken checkpoint chain` |
+| Swap a blinding value | `broken checkpoint chain` |
+| Head the run at a checkpoint that is not the proven leaf | `newest checkpoint is not the anchored one` |
+| Prove a checkpoint against a different tree | `checkpoint not in tree` |
+| Claim more receipts than the batch holds | `a counted slot holds no receipt` |
+| Hide a receipt the batch did not count | `an uncounted slot holds a receipt` |
+| Name the same client twice in one batch | `duplicate counterparty` |
+| Answer an ask written for someone else | `not the holder this was asked of` |
+| Answer the same ask twice | `statement already used` |
+
+Getting `checkpoint not in tree` honestly needs a second contract. Hand-editing the witness only
+proves the runtime rejects a malformed object, which is a refusal about the shape of the lie rather
+than the lie itself — so the path used is a real one, borrowed from another tree.
+
+Each refusal has a sentence the app shows a person. Before this work, not one had ever been
+produced: a message nobody has seen fire is a guess.
 
 ## Requirements
 
@@ -72,20 +104,42 @@ listed here because a README that only lists the wins is how people get misled.
 
 ## Run it
 
+**The quickest way is not to run it.** https://blank-statement.vercel.app needs only a Midnight
+wallet — it is a static site, and the proving happens in your tab.
+
+To run it yourself against a local chain:
+
 ```bash
 npm install
 npm run stack:up          # node 1.0.0, indexer 4.3.3, proof server 8.1.0
 npm run contracts:build   # ~30 s
-npm run bridge            # deploys, anchors two starter runs (~5 min), then serves :8790
 npm run dev               # app on http://127.0.0.1:5177
 ```
 
-The bridge anchors a run of eight entries for each of the four demo holders before it opens the
-port, which takes about thirteen minutes. Until it does, the app shows "Cannot reach the bridge"
-and recovers on its own.
+Connect a wallet, and the app deploys its own contract and takes it from there. Nothing else runs.
 
-The four exist so the states a verifier actually cares about are all reachable from the interface
-rather than only from a test:
+To build the same static bundle the live site serves:
+
+```bash
+VITE_NETWORK=preview VITE_CONTRACT=f040eaea35064ad5e67015efb5e138200c8a771ec884768233590a1291546794   npm run build
+npm run serve:dist        # the build, statically, on :5178
+```
+
+`VITE_CONTRACT` matters: without it every visitor deploys their own contract, pays for it, and
+lands on a ledger nobody else can read — so a verifier would be sent a statement that does not
+exist on the contract they are looking at. `VITE_FEE_RELAY` points at a relay if you want to
+sponsor fees.
+
+Each on-chain action takes 15 to 45 seconds. That is proving time, not network time.
+
+`npm run stack:down` when finished.
+
+### The bridge
+
+`npm run bridge` still exists, and is still useful: it seeds four demo holders so the states a
+verifier cares about are all reachable without importing anything. It is a **development
+convenience only** — it holds a key and does the proving, which is exactly what the product must
+not ask of anyone. The app no longer uses it.
 
 | holder | record | what it demonstrates |
 |---|---|---|
@@ -99,30 +153,30 @@ Those two names share their first 32 bytes, which is what used to collide when c
 were truncated rather than hashed, and the circuit would reject the batch as a duplicate
 counterparty two minutes into proving. Seeding Chidi at all is the regression test.
 
-Then, in order: **Your record** to import a CSV of payments, **Asking** to post an ask,
-**Answering** to answer it, **Statements** to read the result and copy the link.
-Each on-chain action takes 15 to 26 seconds, which is proving time, not network time.
+## Tests
 
-`npm run stack:down` when finished.
-
-Tests. The first needs nothing running and takes a few seconds, so it can gate a commit:
+The first needs nothing running and takes seconds, so it can gate a commit:
 
 ```bash
-npm test                          # 70 tests, no chain, no proving, ~3.5 s
-npm run test:concurrency          # two statements racing on the same ledger slots
-npm run test:concurrency:scale    # the same at N writers; N=10 unless you set N
-npm run test:gasless              # can an unfunded wallet transact via the relay
+npm test                     # 89 tests, no chain, no proving
+npm run qa:circuit-asserts   # every assert in the circuit, forced to fire — 21/21
+npm run qa:browser-native    # the built bundle, with no server behind it
+npm run qa:journey           # ask -> answer -> statement, end to end
+npm run qa:adversarial       # expired, twice-answered, someone else's, forged
+npm run qa:multiparty        # two holders, isolated browser contexts
+npm run qa:chain-truth       # read the ledger directly; do not trust the app
 ```
 
-The circuit suite drives the contract through a `CircuitContext`, so every assertion in the circuit
-has a test that trips it, and one test checks that no receipt amount reaches public state at all.
-The three probes each deploy their own contract and anchor their own run, so they need the stack up
-and cost about two minutes each.
+Point any of them at a public network with `NETWORK=preview`. On preview they cost real fees, so
+they are rationed; `qa:adversarial` (32/32) and `qa:multiparty` (47/47) have both run there.
+
+The circuit suite drives the contract through a `CircuitContext`, so every assertion has a test
+that trips it, and one test checks that no receipt amount reaches public state at all.
 
 ## Bring your own record
 
 **Your record** takes a CSV from a bank, an invoicing tool, or anywhere else money arrived. It is
-parsed in the browser, and the same parser runs in the bridge, so the preview and the anchored
+parsed in the browser, and the same parser anchors it, so the preview and the anchored
 result cannot disagree.
 
 - It needs a counterparty column and an amount column. `date`, `client`, `from`, `payer`, `value`,
@@ -150,23 +204,22 @@ into `pipefail`, and WSL bash rejects it with `set: pipefail: invalid option nam
 ## Layout
 
 ```
-contracts/src/statement.compact   3 circuits: anchorCheckpoint, createRequest, answerRequest
-app/bridge.mjs                    holds the wallet, proves, exposes the contract over HTTP
-app/import.mjs                    CSV and EVM transfers into batches the circuit can anchor
-app/sha256.mjs                    synchronous SHA-256, so counterparty ids match in both places
+contracts/src/statement.compact   5 circuits, 13 asserts, 5 ledger fields
+app/src/client.js                 the product, in the browser: no server in the path
+app/src/chain.js                  wallet providers, proving against the wallet's proof server
+app/src/wallet.js                 what the wallet is doing, in words a person can act on
 app/src/App.jsx                   the four screens
-app/src/styles.css                Blank's design tokens, taken from the brand kit
+app/src/styles.css                design tokens, from the brand kit
+app/import.mjs                    CSV into batches the circuit can anchor
+app/sha256.mjs                    synchronous SHA-256, so counterparty ids match in both places
+app/bridge.mjs                    development only: holds a key and proves. The app does not use it.
+proof/index.html                  the proof deck
+demo/record.mjs                   records the product being used, against a real chain
 scripts/stack.sh                  local ledger-8 stack up/down
 scripts/build-contracts.sh        compile, and report the numbers that matter
-tests/sim.mjs                     drives the compiled contract offline, for both circuit suites
-tests/circuits.test.mjs           circuit unit tests, no chain required
-tests/chain.test.mjs              batch-chain tests, including five forgery attempts
-tests/import.test.mjs             the Record: parsing, batching, and what it refuses
-tests/probe.mjs                   shared rig for the probes that need a live chain
-tests/concurrency.mjs             do two statements racing on the same ledger slots both land
-tests/concurrency-scale.mjs       the same question at N writers (N=10 by default)
-tests/gasless.mjs                 can an unfunded wallet transact with the relay paying
+tests/                            76 files; `npm run` lists the 32 qa: runners
 fee-relay/                        reference fee relay, ported from ledger-v7 to ledger-v8
+qa-evidence/                      screenshots, findings, and the report behind the numbers
 ```
 
 ## Vocabulary
